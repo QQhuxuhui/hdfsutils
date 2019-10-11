@@ -1,0 +1,130 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<configuration scan="true" scanPeriod="30 seconds">
+<include resource="org/springframework/boot/logging/logback/base.xml"/>
+<jmxConfigurator/>
+<property name="USER_HOME" value="./logs/" />
+<timestamp key="FILE_NAME" datePattern="yyyy-MM-dd"/>
+
+<!--<prudent>true</prudent>-->
+
+<!-- 打印到控制台-->
+<appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+        <pattern>
+            [ %-5level] [%date{yyyy-MM-dd HH:mm:ss}] %logger{96} [%line] - %msg%n
+        </pattern>
+    </encoder>
+</appender>
+
+<!--DEBUG-->
+<appender name="LOG-DEBUG"
+          class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <prudent>true</prudent>
+    <filter class="ch.qos.logback.classic.filter.LevelFilter">
+        <level>DEBUG</level>
+        <OnMatch>ACCEPT</OnMatch>
+        <OnMismatch>DENY</OnMismatch>
+    </filter>
+    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+        <fileNamePattern>./logs/DEBUG-%d{yyyy-MM-dd}.log</fileNamePattern>
+        <!-- 保存前7天的日志文件 -->
+        <maxHistory>7</maxHistory>
+    </rollingPolicy>
+    <!-- 如果超过5MB就删除 <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+        <maxFileSize>5MB</maxFileSize>
+        </triggeringPolicy>
+        -->
+    <layout>
+        <Pattern>
+            [ %-5level] [%date{yyyy-MM-dd HH:mm:ss}] %logger{96}[%line] - %msg%n
+        </Pattern>
+    </layout>
+</appender>
+
+<!--WARN-->
+<appender name="LOG-WARN"
+          class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <prudent>true</prudent>
+    <filter class="ch.qos.logback.classic.filter.LevelFilter">
+        <level>WARN</level>
+        <OnMatch>ACCEPT</OnMatch>
+        <OnMismatch>DENY</OnMismatch>
+    </filter>
+    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+        <fileNamePattern>./logs/WARN-%d{yyyy-MM-dd}.log</fileNamePattern>
+        <!-- 保存前7天的日志文件 -->
+        <maxHistory>7</maxHistory>
+    </rollingPolicy>
+    <!-- 如果超过5MB就删除 <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+        <maxFileSize>5MB</maxFileSize>
+        </triggeringPolicy>
+        -->
+    <layout>
+        <Pattern>
+            [ %-5level] [%date{yyyy-MM-dd HH:mm:ss}] %logger{96} [%line] - %msg%n
+        </Pattern>
+    </layout>
+</appender>
+
+
+<!--ERROR-->
+<appender name="LOG-ERROR"
+          class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <prudent>true</prudent>
+    <filter class="ch.qos.logback.classic.filter.LevelFilter">
+        <level>ERROR</level>
+        <OnMatch>ACCEPT</OnMatch>
+        <OnMismatch>DENY</OnMismatch>
+    </filter>
+    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+        <fileNamePattern>./logs/ERROR-%d{yyyy-MM-dd}.log</fileNamePattern>
+        <!-- 保存前7天的日志文件 -->
+        <maxHistory>7</maxHistory>
+    </rollingPolicy>
+    <!-- 如果超过5MB就删除 <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+        <maxFileSize>5MB</maxFileSize>
+        </triggeringPolicy>
+        -->
+    <layout>
+        <Pattern>
+            [ %-5level] [%date{yyyy-MM-dd HH:mm:ss}] %logger{96}[%line] - %msg%n
+        </Pattern>
+    </layout>
+</appender>
+
+<!--INFO-->
+<appender name="LOG-INFO"
+          class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <prudent>true</prudent>
+    <filter class="ch.qos.logback.classic.filter.LevelFilter">
+        <level>INFO</level>
+        <OnMatch>ACCEPT</OnMatch>
+        <OnMismatch>DENY</OnMismatch>
+    </filter>
+    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+        <fileNamePattern>./logs/INFO-%d{yyyy-MM-dd}.log</fileNamePattern>
+        <!-- 保存前7天的日志文件 -->
+        <maxHistory>7</maxHistory>
+    </rollingPolicy>
+    <!-- 如果超过5MB就删除 <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+        <maxFileSize>5MB</maxFileSize>
+        </triggeringPolicy>
+        -->
+    <layout>
+        <Pattern>
+            [ %-5level] [%date{yyyy-MM-dd HH:mm:ss}] %logger{96} [%line] - %msg%n
+        </Pattern>
+    </layout>
+</appender>
+
+<!-- 设置日志级别 -->
+<root level="INFO">
+    <appender-ref ref="LOG-DEBUG" />
+    <appender-ref ref="LOG-INFO" />
+    <appender-ref ref="LOG-WARN" />
+    <appender-ref ref="LOG-ERROR" />
+    <appender-ref ref="STDOUT" />
+</root>
+
+
+</configuration>

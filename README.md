@@ -19,7 +19,7 @@ mvn assembly:assembly
 ## 使用说明
 
 
-### 1. 解压缩文件(Gzip格式)
+### 1. 批量解压缩文件(Gzip格式)
 ```
 java -cp HDFSUtils-1.0-jar-with-dependencies.jar hdfs.compress.CompressFile <fsUri> <path> <type> <isAll>
 ```

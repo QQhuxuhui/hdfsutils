@@ -26,7 +26,20 @@ public class MergeSmallFile {
     private static String folderPath = null;
 
     private static Configuration configuration = new Configuration();
-    private ExecutorService es = Executors.newFixedThreadPool(3);
+
+    static {
+        configuration.set("dfs.support.append", "true");
+        configuration.set("dfs.client.block.write.replace-datanode-on-failure.policy", "NEVER");
+        configuration.set("dfs.client.block.write.replace-datanode-on-failure.enable", "true");
+        /**
+         * 这个配置主要是针对打包的时候的问题：
+         * hadoop filesystem相关的包有两个，分别是：hadoop-hdfs-2.7.1.jar和hadoop-common-2.7.1.jar
+         * 指定即可，否则会出现java.io.IOException: No FileSystem for scheme: hdfs的异常
+         */
+        configuration.set("fs.hdfs.impl", "org.apache.hadoop.hdfs.DistributedFileSystem");
+    }
+
+    private ExecutorService es = Executors.newFixedThreadPool(5);
     private static long blockSize = 134217728;//128MB
 
     public static void main(String[] args) throws IOException {
@@ -44,6 +57,7 @@ public class MergeSmallFile {
         String[] uargs = new GenericOptionsParser(configuration, args).getRemainingArgs();
         defaultFS = uargs[0];
         folderPath = uargs[1];
+        logger.info("fsUri:{},path:{}", defaultFS, folderPath);
         mergeSmallFile.merge();
     }
 

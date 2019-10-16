@@ -25,6 +25,7 @@ public class CompressFile {
 
     private static String defaultFS = null;
     private static Configuration configuration = new Configuration();
+
     static {
         configuration.set("dfs.support.append", "true");
         configuration.set("dfs.client.block.write.replace-datanode-on-failure.policy", "NEVER");
@@ -36,6 +37,7 @@ public class CompressFile {
          */
         configuration.set("fs.hdfs.impl", "org.apache.hadoop.hdfs.DistributedFileSystem");
     }
+
     private ExecutorService es = Executors.newFixedThreadPool(5);
 
     /**
@@ -71,9 +73,10 @@ public class CompressFile {
         String type = uargs[2];
         if ("compress".equals(type)) {
             compressFile.compress(sourceDir);
-        }
-        if ("uncompress".equals(type)) {
+        } else if ("uncompress".equals(type)) {
             compressFile.uncompress(sourceDir);
+        }else{
+            logger.error("unknown params");
         }
     }
 
@@ -105,7 +108,7 @@ public class CompressFile {
 
     /**
      * 递归遍历获取目录下的所有需要压缩的文件（非文件夹）列表
-     *
+     * 这里的判断文件格式比较简单，直接用是否含有.gz判断！
      * @param fileSystem
      * @param path
      * @throws IOException
@@ -114,41 +117,8 @@ public class CompressFile {
         //判断是否为文件夹
         for (FileStatus fileStatus : fileSystem.globStatus(path)) {
             if (fileStatus.isFile() && !fileStatus.getPath().getName().contains(".gz")) {
-                //判断此文件格式，
-                short leadBytes = 0;
-                FSDataInputStream fin = null;
-                try {
-                    fin = fileSystem.open(fileStatus.getPath());
-                    leadBytes = fin.readShort();
-                } catch (EOFException e) {
-                    if (fin != null) {
-                        fin.seek(0);
-                    }
-                    e.printStackTrace();
-                }
-                FileTypeEnum fileType = null;
-
-                /**
-                 * 只做两种类型判断，sequence和text
-                 */
-                switch (leadBytes) {
-                    // 'S'  'E'
-                    case 31522:
-                        if (fin.readByte() == 'Q') {
-                            fileType = FileTypeEnum.SEQUENCE;
-                        } else {
-                            fileType = FileTypeEnum.TEXT;
-                        }
-                        break;
-                    default:
-                        fileType = FileTypeEnum.TEXT;
-                        break;
-                }
-                //只压缩Text或Sequence格式文件
-                if (fileType.getTypeName().equals(FileTypeEnum.TEXT.getTypeName()) ||
-                        fileType.getTypeName().equals(FileTypeEnum.SEQUENCE.getTypeName())) {
-                    filePathList.add(fileStatus.getPath());
-                }
+                filePathList.add(fileStatus.getPath());
+                logger.info("filePathList size:{}", filePathList.size());
             }
             if (fileStatus.isDirectory() && isAll) {
                 getNeedCompressFilePathList(fileSystem, new Path(path.toUri().getPath().concat("/*")));

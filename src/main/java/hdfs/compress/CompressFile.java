@@ -38,7 +38,7 @@ public class CompressFile {
         configuration.set("fs.hdfs.impl", "org.apache.hadoop.hdfs.DistributedFileSystem");
     }
 
-    private ExecutorService es = Executors.newFixedThreadPool(5);
+    private static ExecutorService es;
 
     /**
      * 是否递归操作目录以及子目录下的所有文件
@@ -53,16 +53,18 @@ public class CompressFile {
     private List<Path> filePathList = new ArrayList<>();
 
     public static void main(String[] args) throws Exception {
-        if (args.length == 0 || args.length > 4) {
+        if (args.length == 0 || args.length > 5) {
             logger.error("parameters error!!!");
-            logger.error("Parameter format:{} {} {} {}", "<fsUri>", "<path>", "<type>", "<isAll>");
+            logger.error("Parameter format:{} {} {} {} {}", "<fsUri>", "<path>", "<type>", "<threads>", "<isAll>");
             logger.error("compress file example: hdfs://xxx.xxx.xxx.xxx:8020 /xxx/xxx/xxx/ compress true");
             logger.error("uncompress file example: hdfs://xxx.xxx.xxx.xxx:8020 /xxx/xxx/xxx/ uncompress true");
             return;
         }
-        if (args.length == 4) {
-            isAll = Boolean.parseBoolean(args[3]);
+        if (args.length == 5) {
+            isAll = Boolean.parseBoolean(args[4]);
         }
+        int threadNum = Integer.parseInt(args[3]);
+        es = Executors.newFixedThreadPool(threadNum);
         CompressFile compressFile = new CompressFile();
         String[] uargs = new GenericOptionsParser(configuration, args).getRemainingArgs();
         defaultFS = uargs[0];
@@ -75,8 +77,8 @@ public class CompressFile {
             compressFile.compress(sourceDir);
         } else if ("uncompress".equals(type)) {
             compressFile.uncompress(sourceDir);
-        }else{
-            logger.error("unknown params");
+        } else {
+            logger.error("params error");
         }
     }
 
@@ -109,6 +111,7 @@ public class CompressFile {
     /**
      * 递归遍历获取目录下的所有需要压缩的文件（非文件夹）列表
      * 这里的判断文件格式比较简单，直接用是否含有.gz判断！
+     *
      * @param fileSystem
      * @param path
      * @throws IOException
@@ -118,7 +121,7 @@ public class CompressFile {
         for (FileStatus fileStatus : fileSystem.globStatus(path)) {
             if (fileStatus.isFile() && !fileStatus.getPath().getName().contains(".gz")) {
                 filePathList.add(fileStatus.getPath());
-                logger.info("filePathList size:{}", filePathList.size());
+                logger.info("need compress file num:{}", filePathList.size());
             }
             if (fileStatus.isDirectory() && isAll) {
                 getNeedCompressFilePathList(fileSystem, new Path(path.toUri().getPath().concat("/*")));

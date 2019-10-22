@@ -48,6 +48,8 @@ public class GzipCompressThread implements Runnable {
         //压缩文件
         Class<?> codecClass = null;
         FileSystem fs = null;
+        FSDataInputStream in = null;
+        CompressionOutputStream out = null;
         try {
             fs = FileSystem.get(URI.create(defaultFS), configuration);
             codecClass = Class.forName(codecClassName);
@@ -56,32 +58,32 @@ public class GzipCompressThread implements Runnable {
             //指定压缩文件输出路径
             FSDataOutputStream outputStream = fs.create(new Path(gzipFileDir));
             //指定被压缩的文件路径
-            FSDataInputStream in = fs.open(new Path(sourceFile));
+            in = fs.open(new Path(sourceFile));
             //创建压缩输出流
-            CompressionOutputStream out = codec.createOutputStream(outputStream);
+            out = codec.createOutputStream(outputStream);
             IOUtils.copyBytes(in, out, configuration);
-            IOUtils.closeStream(in);
-            IOUtils.closeStream(out);
             fs.delete(new Path(sourceFile), true);
             logger.info("compress success delete:{}", sourceFile);
         } catch (Exception e) {
             e.printStackTrace();
             logger.error("compress file fail,roll back....");
-            if (fs != null) {
-                try {
+            try {
+                if (fs != null) {
                     fs.delete(new Path(gzipFileDir), true);
-                } catch (IOException ex) {
-                    ex.printStackTrace();
                 }
+            } catch (IOException ex) {
+                ex.printStackTrace();
             }
-        }finally {
-//            if (fs != null) {
-//                try {
-//                    fs.close();
-//                } catch (IOException e) {
-//                    e.printStackTrace();
-//                }
-//            }
+        } finally {
+            try {
+                if (fs != null) {
+                    fs.close();
+                }
+                IOUtils.closeStream(in);
+                IOUtils.closeStream(out);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 }

@@ -51,18 +51,17 @@ public class GzipUncompressThread implements Runnable {
         //压缩文件
         Class<?> codecClass = null;
         FileSystem fs = null;
+        FSDataInputStream input = null;
+        OutputStream output = null;
         try {
             fs = FileSystem.get(URI.create(defaultFS), configuration);
             codecClass = Class.forName(codecClassName);
             CompressionCodec codec = (CompressionCodec) ReflectionUtils.newInstance(codecClass, configuration);
-
             //指定压缩文件输出路径
-            FSDataInputStream input = fs.open(new Path(sourceFile));
+            input = fs.open(new Path(sourceFile));
             CompressionInputStream codec_input = codec.createInputStream(input);
-            OutputStream output = fs.create(new Path(goal_dir));
+            output = fs.create(new Path(goal_dir));
             IOUtils.copyBytes(codec_input, output, configuration);
-            IOUtils.closeStream(input);
-            IOUtils.closeStream(output);
             fs.delete(new Path(sourceFile), true);
             logger.info("compress success delete:{}", sourceFile);
         } catch (Exception e) {
@@ -74,6 +73,16 @@ public class GzipUncompressThread implements Runnable {
                 } catch (IOException ex) {
                     ex.printStackTrace();
                 }
+            }
+        } finally {
+            try {
+                if (fs != null) {
+                    fs.close();
+                }
+                IOUtils.closeStream(input);
+                IOUtils.closeStream(output);
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         }
     }

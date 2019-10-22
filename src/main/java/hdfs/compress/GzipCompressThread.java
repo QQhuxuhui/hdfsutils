@@ -74,6 +74,14 @@ public class GzipCompressThread implements Runnable {
                     ex.printStackTrace();
                 }
             }
+        }finally {
+//            if (fs != null) {
+//                try {
+//                    fs.close();
+//                } catch (IOException e) {
+//                    e.printStackTrace();
+//                }
+//            }
         }
     }
 }

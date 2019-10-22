@@ -9,8 +9,7 @@ import org.slf4j.LoggerFactory;
 import java.io.EOFException;
 import java.io.IOException;
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -50,7 +49,7 @@ public class CompressFile {
     /**
      * 存储文件列表
      */
-    private List<Path> filePathList = new ArrayList<>();
+    private Set<String> filePathSet = new LinkedHashSet<>();
 
     public static void main(String[] args) throws Exception {
         if (args.length == 0 || args.length > 5) {
@@ -86,12 +85,12 @@ public class CompressFile {
         FileSystem fileSystem = FileSystem.get(URI.create(defaultFS), configuration);
         //递归获取所有需要压缩的文件列表
         getNeedCompressFilePathList(fileSystem, new Path(sourceDir));
-        logger.info("total file num:{}", filePathList.size());
-        for (Path path : filePathList) {
-            es.execute(new GzipCompressThread(defaultFS, path.toUri().getPath(), configuration));
+        logger.info("total file num:{}", filePathSet.size());
+        for (String path : filePathSet) {
+            es.execute(new GzipCompressThread(defaultFS, path, configuration));
         }
         es.shutdown();
-        filePathList.clear();
+        filePathSet.clear();
     }
 
 
@@ -99,12 +98,12 @@ public class CompressFile {
         FileSystem fileSystem = FileSystem.get(URI.create(defaultFS), configuration);
         //递归获取所有需要压缩的文件列表
         getNeedUnCompressFilePathList(fileSystem, new Path(sourceDir));
-        logger.info("total file num:{}", filePathList.size());
-        for (Path path : filePathList) {
-            es.execute(new GzipUncompressThread(defaultFS, path.toUri().getPath(), configuration));
+        logger.info("total file num:{}", filePathSet.size());
+        for (String path : filePathSet) {
+            es.execute(new GzipUncompressThread(defaultFS, path, configuration));
         }
         es.shutdown();
-        filePathList.clear();
+        filePathSet.clear();
     }
 
 
@@ -120,11 +119,11 @@ public class CompressFile {
         //判断是否为文件夹
         for (FileStatus fileStatus : fileSystem.globStatus(path)) {
             if (fileStatus.isFile() && !fileStatus.getPath().getName().contains(".gz")) {
-                filePathList.add(fileStatus.getPath());
-                logger.info("need compress file num:{}", filePathList.size());
+                filePathSet.add(fileStatus.getPath().toUri().toString());
+                logger.info("need compress file num:{}", filePathSet.size());
             }
             if (fileStatus.isDirectory() && isAll) {
-                getNeedCompressFilePathList(fileSystem, new Path(path.toUri().getPath().concat("/*")));
+                getNeedCompressFilePathList(fileSystem, new Path(fileStatus.getPath().toUri().getPath().concat("/*")));
             }
         }
     }
@@ -141,7 +140,7 @@ public class CompressFile {
         //判断是否为文件夹
         for (FileStatus fileStatus : fileSystem.globStatus(path)) {
             if (fileStatus.isFile() && fileStatus.getPath().getName().contains(".gz")) {
-                filePathList.add(fileStatus.getPath());
+                filePathSet.add(fileStatus.getPath().toUri().toString());
             }
             if (fileStatus.isDirectory() && isAll) {
                 getNeedUnCompressFilePathList(fileSystem, new Path(path.toUri().getPath().concat("/*")));

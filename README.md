@@ -25,7 +25,7 @@ java -cp HDFSUtils-1.0-jar-with-dependencies.jar hdfs.compress.CompressFile <fsU
 ```
 
 ##### 参数说明
-- \<fsUr\i>：hdfs地址，例如hdfs://xxx.xxx.xxx.xxx:8020
+- \<fsUri\>：hdfs地址，例如hdfs://xxx.xxx.xxx.xxx:8020
 - \<path\>：需要合并的目录路径，例如解压缩hdfs上面位于/data/a目录下的文件，参数就为/data/a或者/data/a/或者/data/a/*都可以
 - \<type\>:
     - compress:压缩

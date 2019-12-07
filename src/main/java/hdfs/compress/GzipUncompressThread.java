@@ -34,10 +34,13 @@ public class GzipUncompressThread implements Runnable {
     //配置
     private Configuration configuration;
 
-    public GzipUncompressThread(String defaultFS, String path, Configuration configuration) {
+    private FileSystem fileSystem;
+
+    public GzipUncompressThread(String defaultFS, String path, Configuration configuration, FileSystem fileSystem) {
         this.sourceFile = path;
         this.defaultFS = defaultFS;
         this.configuration = configuration;
+        this.fileSystem = fileSystem;
     }
 
     @Override
@@ -50,40 +53,31 @@ public class GzipUncompressThread implements Runnable {
         logger.info("start uncompress file:{},target file:{}", sourceFile, goal_dir);
         //压缩文件
         Class<?> codecClass = null;
-        FileSystem fs = null;
         FSDataInputStream input = null;
         OutputStream output = null;
         try {
-            fs = FileSystem.get(URI.create(defaultFS), configuration);
             codecClass = Class.forName(codecClassName);
             CompressionCodec codec = (CompressionCodec) ReflectionUtils.newInstance(codecClass, configuration);
             //指定压缩文件输出路径
-            input = fs.open(new Path(sourceFile));
+            input = fileSystem.open(new Path(sourceFile));
             CompressionInputStream codec_input = codec.createInputStream(input);
-            output = fs.create(new Path(goal_dir));
+            output = fileSystem.create(new Path(goal_dir));
             IOUtils.copyBytes(codec_input, output, configuration);
-            fs.delete(new Path(sourceFile), true);
+            fileSystem.delete(new Path(sourceFile), true);
             logger.info("compress success delete:{}", sourceFile);
         } catch (Exception e) {
             e.printStackTrace();
             logger.error("compress file fail,roll back....");
-            if (fs != null) {
+            if (fileSystem != null) {
                 try {
-                    fs.delete(new Path(goal_dir), true);
+                    fileSystem.delete(new Path(goal_dir), true);
                 } catch (IOException ex) {
                     ex.printStackTrace();
                 }
             }
         } finally {
-            try {
-                if (fs != null) {
-                    fs.close();
-                }
                 IOUtils.closeStream(input);
                 IOUtils.closeStream(output);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
         }
     }
 }

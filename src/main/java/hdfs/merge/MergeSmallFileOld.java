@@ -1,5 +1,6 @@
 package hdfs.merge;
 
+import hdfs.utils.DateUtil;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.IOUtils;
@@ -9,6 +10,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
@@ -19,9 +21,9 @@ import java.util.concurrent.Executors;
  * @Date: 2019/10/9 10:48
  * @Description: HDFS小文件合并
  */
-public class MergeSmallFile {
+public class MergeSmallFileOld {
 
-    private static Logger logger = LoggerFactory.getLogger(MergeSmallFile.class);
+    private static Logger logger = LoggerFactory.getLogger(MergeSmallFileOld.class);
 
     private static String defaultFS = null;
     private static String folderPath = null;
@@ -42,7 +44,7 @@ public class MergeSmallFile {
         configuration.set("fs.hdfs.impl", "org.apache.hadoop.hdfs.DistributedFileSystem");
     }
 
-    private ExecutorService es = Executors.newFixedThreadPool(3);
+    private ExecutorService es = Executors.newFixedThreadPool(1);
     private static long blockSize = 134217728;//128MB
 
     private Set<String> needMergerFolderPath = new HashSet<>();
@@ -58,7 +60,7 @@ public class MergeSmallFile {
 //            //自定义压缩块大小
 //            blockSize = Long.parseLong(args[2]);
 //        }
-        MergeSmallFile mergeSmallFile = new MergeSmallFile();
+        MergeSmallFileOld mergeSmallFile = new MergeSmallFileOld();
         String[] uargs = new GenericOptionsParser(configuration, args).getRemainingArgs();
         defaultFS = uargs[0];
         folderPath = uargs[1];
@@ -90,7 +92,7 @@ public class MergeSmallFile {
             if (fileStatus.isFile()) {
                 needMergerFolderPath.add(fileStatus.getPath().getParent().toUri().toString());
                 if (needMergerFolderPath.size() % 100 == 0) {
-                    logger.info("need merge folder num:{}", needMergerFolderPath.size());
+                    logger.info("need merge file num:{}", needMergerFolderPath.size());
                 }
             }
             if (fileStatus.isDirectory()) {
@@ -107,8 +109,10 @@ public class MergeSmallFile {
         String folderPath;
         FileSystem fileSystem;
 
+        FSDataOutputStream out = null;
+        FSDataInputStream in = null;
         //存放老文件的目录列表
-        Set<FileStatus> oldFiles = new HashSet<>();
+        Set<String> oldFiles = new HashSet<>();
         //存放新文件的目录列表
         Set<String> newFiles = new HashSet<>();
 
@@ -117,114 +121,109 @@ public class MergeSmallFile {
             this.fileSystem = fileSystem;
         }
 
-        /**
-         * 1、获取目录下需要合并的文件列表
-         * 2、遍历合并列表合并碎文件数据至新生成的文件内，不断检查新文件大小，如果超过定义大小再新生成一个文件继续合并，
-         * 并将已合并的碎文件记录至oldFiles集合，新生成的文件记录至newFiles集合
-         * 3、合并完毕删除oldFileList集合内记录的文件
-         * 4、发生异常删除新生成的文件
-         */
         @Override
         public void run() {
-            //获取所有文件列表
-            FileStatus[] fileStatuses = new FileStatus[0];
             try {
-                fileStatuses = fileSystem.globStatus(new Path(folderPath + "/*"));
-            } catch (IOException e) {
-                e.printStackTrace();
-                return;
-            }
-
-            int fileCount = fileStatuses.length;
-            if (fileCount <= 1) {
-                return;
-            }
-            for (int index = 0; index <= fileCount - 1; index++) {
-                //忽略相对的大文件
-                if (fileStatuses[index].getLen() >= blockSize / 2) {
-                    continue;
+                FileStatus[] fileStatuses = fileSystem.globStatus(new Path(folderPath + "/*"));
+                int fileCount = fileStatuses.length;
+                if (fileCount <= 0) {
+                    return;
                 }
-                //非文件过滤
-                if (!fileStatuses[index].isFile()) {
-                    continue;
+                if (fileCount == 1) {
+                    return;
                 }
-                //过滤.tmp临时文件
-                if (fileStatuses[index].getPath().getName().endsWith(".tmp")) {
-                    continue;
-                }
-                //指定压缩文件模式下，过滤非压缩文件
-                if (gz && !fileStatuses[index].getPath().getName().contains(".gz")) {
-                    continue;
-                }
-                //指定非压缩文件模式下，过滤压缩文件
-                if (!gz && fileStatuses[index].getPath().getName().contains(".gz")) {
-                    continue;
-                }
-                oldFiles.add(fileStatuses[index]);
-            }
-            //判定需要压缩的文件数量如果0或者1，则不需要再压缩
-            if (oldFiles.size() <= 1) {
-                return;
-            }
-            /**
-             * 2、开始遍历压缩
-             */
-            logger.info("{},need merge file count:{}", folderPath, oldFiles.size());
-            long filesSize = 0;//统计已经合并的文件大小
-            String outFileName;
-            //数据合并后的文件
-            Path outFilePath = null;
-            //OutputStream to write to
-            FSDataOutputStream out = null;
-            try {
-                int index = 0;//统计数据
-                for (FileStatus oldFile : oldFiles) {
-                    index++;
-                    //创建合并文件
-                    if (outFilePath == null) {
-                        //如果大小为0，创建新文件用来准备合并
-                        outFileName = oldFile.getPath().getName().split("\\.")[0] + "." + System.currentTimeMillis();
-                        if (oldFile.getPath().getName().contains(".gz") && gz) {
-                            outFileName = outFileName + ".gz";
+                //遍历文件，计算小文件大小，忽略大文件
+                //记录需要导入的文件名称
+                String outFileName = null;
+                Path outFilePath = null;
+                long filesSize = 0;//一定数量的小文件的总长度
+                int bigFileCount = 0;//统计相对较大的文件，如果一个目录里面就一个需要合并的小文件不再处理。
+                //统计
+                for (int index = 0; index <= fileCount - 1; index++) {
+                    //忽略相对的大文件
+                    if (fileStatuses[index].getLen() >= blockSize / 2) {
+                        bigFileCount++;
+                        continue;
+                    }
+                    if (bigFileCount == fileCount - 1) {
+                        break;
+                    }
+                    if (filesSize == 0) {
+                        if (!fileStatuses[index].isFile()) {
+                            //非文件过滤
+                            continue;
                         }
-                        outFilePath = new Path(folderPath + "/" + outFileName);
-                        out = fileSystem.create(outFilePath);
-                        newFiles.add(folderPath + "/" + outFileName);//加入新文件列表
+                        //指定压缩文件模式下，过滤非压缩文件
+                        if (gz && !fileStatuses[index].getPath().getName().contains(".gz")) {
+                            continue;
+                        }
+                        //指定非压缩文件模式下，过滤压缩文件
+                        if (!gz && fileStatuses[index].getPath().getName().contains(".gz")) {
+                            continue;
+                        }
+                        //重新计数，生成文件名
+                        if (outFileName == null) {
+                            outFileName = fileStatuses[index].getPath().getName().split("\\.")[0] + "." + System.currentTimeMillis();
+                            if (fileStatuses[index].getPath().getName().contains(".gz") && gz) {
+                                outFileName = outFileName + ".gz";
+                            }
+                            outFilePath = new Path(folderPath + "/" + outFileName);
+                            newFiles.add(outFilePath.toUri().getPath());
+                        }
+                        if (out != null) {
+                            IOUtils.closeStream(out);
+                        }
+                        if (fileSystem.exists(outFilePath)) {
+                            out = fileSystem.append(outFilePath);
+                        } else {
+                            out = fileSystem.create(outFilePath);
+                        }
                     }
-                    //OutputStream to write from
-                    FSDataInputStream in = fileSystem.open(oldFile.getPath());
-                    //合并
-                    IOUtils.copyBytes(in, out, configuration, false);
-                    /**
-                     * 1、关闭合并完的数据流
-                     * 2、累计合并的大小，判定是否需要重新创建文件
-                     */
-                    IOUtils.closeStream(in);
-                    filesSize = filesSize + oldFile.getLen();
+
+                    filesSize += fileStatuses[index].getLen();
                     if (filesSize >= blockSize) {
+                        //重新开始计数
                         filesSize = 0;
-                        outFilePath = null;
+                        index--;//index回退
+                        outFileName = null;
+                    } else {
+                        //写入数据
+                        if (!fileStatuses[index].getPath().getName().equals(outFilePath.getName())) {
+                            //过滤今日生成的tmp文件
+                            if (fileStatuses[index].getPath().getName().endsWith(".tmp") ||
+                                    fileStatuses[index].getPath().toUri().toString().contains("/" + DateUtil.dateToString(new Date(), "yyyyMMdd") + "/")) {
+                                continue;
+                            }
+                            try {
+                                //不是同一个文件，写入
+                                in = fileSystem.open(fileStatuses[index].getPath());
+                                IOUtils.copyBytes(in, out, configuration);
+                                oldFiles.add(fileStatuses[index].getPath().toUri().getPath());
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        }
                     }
+                    //关闭写入流
+                    IOUtils.closeStream(in);
                     if (index % 10 == 0 || index == fileCount - 1) {
-                        logger.info("foler:{},total:{},current:{},size:{}KB,{}MB", folderPath, fileCount, index + 1, filesSize / 1024, filesSize / (1024 * 1024));
+                        logger.info("foler:{},total:{},current:{},size:{}KB", folderPath, fileCount, index + 1, filesSize / 1024);
                     }
                 }
-                //合并完毕，关闭数据流，删除旧文件
-                IOUtils.closeStream(out);
+                //合并完毕，删除旧文件
                 int delCount = 0;
-                for (FileStatus oldFile : oldFiles) {
+                for (String oldFile : oldFiles) {
                     delCount++;
                     try {
-                        fileSystem.delete(oldFile.getPath(), true);
+                        fileSystem.delete(new Path(oldFile), true);
                     } catch (IOException ex) {
                         ex.printStackTrace();
                     }
                     if (delCount % 10 == 0 || delCount == oldFiles.size()) {
-                        logger.info("delete old file,filePath:{}, current:{}, total:{}", folderPath, delCount, oldFiles.size());
+                        logger.info("delete old file, current:{}, total:{}", delCount, oldFiles.size());
                     }
                 }
             } catch (Exception e) {
-                //合并异常，回滚数据文件
                 e.printStackTrace();
                 logger.info("merge fail start rollback...");
                 for (String newFile : newFiles) {
@@ -234,9 +233,7 @@ public class MergeSmallFile {
                         ex.printStackTrace();
                     }
                 }
-                logger.info("rollback success...");
-            } finally {
-                IOUtils.closeStream(out);
+                logger.info("rollback complete...");
             }
         }
     }

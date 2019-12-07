@@ -37,7 +37,7 @@ java -cp HDFSUtils-1.0-jar-with-dependencies.jar hdfs.compress.CompressFile <fsU
 
 ### 2. 合并指定目录下的小文件
 ```
-java -cp HDFSUtils-1.0-jar-with-dependencies.jar hdfs.merge.MergeSmallFile <fsUri> <path> <isGz>
+java -cp HDFSUtils-1.0-jar-with-dependencies.jar hdfs.merge.MergeSmallFileOld <fsUri> <path> <isGz>
 ```
 ##### 参数说明
 - \<fsUri\>：hdfs地址，例如hdfs://xxx.xxx.xxx.xxx:8020

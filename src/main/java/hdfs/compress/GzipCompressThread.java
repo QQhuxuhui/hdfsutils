@@ -34,11 +34,14 @@ public class GzipCompressThread implements Runnable {
     //配置
     private Configuration configuration;
 
+    private FileSystem fileSystem;
 
-    public GzipCompressThread(String defaultFS, String sourceFile, Configuration configuration) {
+
+    public GzipCompressThread(String defaultFS, String sourceFile, Configuration configuration, FileSystem fileSystem) {
         this.sourceFile = sourceFile;
         this.defaultFS = defaultFS;
         this.configuration = configuration;
+        this.fileSystem = fileSystem;
     }
 
     @Override
@@ -47,43 +50,34 @@ public class GzipCompressThread implements Runnable {
         logger.info("start compress file:{},target file:{}", sourceFile, gzipFileDir);
         //压缩文件
         Class<?> codecClass = null;
-        FileSystem fs = null;
         FSDataInputStream in = null;
         CompressionOutputStream out = null;
         try {
-            fs = FileSystem.get(URI.create(defaultFS), configuration);
             codecClass = Class.forName(codecClassName);
             CompressionCodec codec = (CompressionCodec) ReflectionUtils.newInstance(codecClass, configuration);
 
             //指定压缩文件输出路径
-            FSDataOutputStream outputStream = fs.create(new Path(gzipFileDir));
+            FSDataOutputStream outputStream = fileSystem.create(new Path(gzipFileDir));
             //指定被压缩的文件路径
-            in = fs.open(new Path(sourceFile));
+            in = fileSystem.open(new Path(sourceFile));
             //创建压缩输出流
             out = codec.createOutputStream(outputStream);
             IOUtils.copyBytes(in, out, configuration);
-            fs.delete(new Path(sourceFile), true);
+            fileSystem.delete(new Path(sourceFile), true);
             logger.info("compress success delete:{}", sourceFile);
         } catch (Exception e) {
             e.printStackTrace();
             logger.error("compress file fail,roll back....");
             try {
-                if (fs != null) {
-                    fs.delete(new Path(gzipFileDir), true);
+                if (fileSystem != null) {
+                    fileSystem.delete(new Path(gzipFileDir), true);
                 }
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
         } finally {
-            try {
-                if (fs != null) {
-                    fs.close();
-                }
-                IOUtils.closeStream(in);
-                IOUtils.closeStream(out);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            IOUtils.closeStream(in);
+            IOUtils.closeStream(out);
         }
     }
 }

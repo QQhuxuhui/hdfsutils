@@ -87,7 +87,7 @@ public class CompressFile {
         getNeedCompressFilePathList(fileSystem, new Path(sourceDir));
         logger.info("total file num:{}", filePathSet.size());
         for (String path : filePathSet) {
-            es.execute(new GzipCompressThread(defaultFS, path, configuration));
+            es.execute(new GzipCompressThread(defaultFS, path, configuration, fileSystem));
         }
         es.shutdown();
         filePathSet.clear();
@@ -100,7 +100,7 @@ public class CompressFile {
         getNeedUnCompressFilePathList(fileSystem, new Path(sourceDir));
         logger.info("total file num:{}", filePathSet.size());
         for (String path : filePathSet) {
-            es.execute(new GzipUncompressThread(defaultFS, path, configuration));
+            es.execute(new GzipUncompressThread(defaultFS, path, configuration, fileSystem));
         }
         es.shutdown();
         filePathSet.clear();

@@ -79,6 +79,20 @@ public class CompressFile {
         } else {
             logger.error("params error");
         }
+
+        while (!es.isTerminated()) {
+            try {
+                Thread.sleep(5000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        if ("compress".equals(type)) {
+            logger.info("compress job complete, exit...");
+        }else{
+            logger.info("uncompress job complete, exit...");
+        }
+        logger.info("exit success, bye bye!");
     }
 
     private void compress(String sourceDir) throws IOException {

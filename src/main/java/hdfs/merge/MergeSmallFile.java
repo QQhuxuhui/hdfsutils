@@ -42,7 +42,7 @@ public class MergeSmallFile {
         configuration.set("fs.hdfs.impl", "org.apache.hadoop.hdfs.DistributedFileSystem");
     }
 
-    private ExecutorService es = Executors.newFixedThreadPool(3);
+    private ExecutorService es = Executors.newFixedThreadPool(2);
     private static long blockSize = 134217728;//128MB
 
     private Set<String> needMergerFolderPath = new HashSet<>();
@@ -82,6 +82,15 @@ public class MergeSmallFile {
             es.execute(new MergeThread(path, fileSystem));
         }
         es.shutdown();
+        while (!es.isTerminated()) {
+            try {
+                Thread.sleep(5000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        logger.info("merge job complete, exit...");
+        logger.info("exit success, bye bye!");
     }
 
     private void getNeedMergeFolderPathList(FileSystem fileSystem, Path path) throws IOException {

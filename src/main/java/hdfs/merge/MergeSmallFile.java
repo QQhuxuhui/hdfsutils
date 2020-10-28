@@ -97,9 +97,12 @@ public class MergeSmallFile {
         //判断是否为文件夹
         for (FileStatus fileStatus : fileSystem.globStatus(path)) {
             if (fileStatus.isFile()) {
-                needMergerFolderPath.add(fileStatus.getPath().getParent().toUri().toString());
-                if (needMergerFolderPath.size() % 100 == 0) {
-                    logger.info("need merge folder num:{}", needMergerFolderPath.size());
+                String fileName = fileStatus.getPath().getName();
+                if (!fileName.startsWith("_") && !fileName.startsWith(".")) {
+                    needMergerFolderPath.add(fileStatus.getPath().getParent().toUri().toString());
+                    if (needMergerFolderPath.size() % 100 == 0) {
+                        logger.info("need merge folder num:{}", needMergerFolderPath.size());
+                    }
                 }
             }
             if (fileStatus.isDirectory()) {

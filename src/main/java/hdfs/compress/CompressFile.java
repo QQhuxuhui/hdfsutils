@@ -132,7 +132,11 @@ public class CompressFile {
     private void getNeedCompressFilePathList(FileSystem fileSystem, Path path) throws IOException {
         //判断是否为文件夹
         for (FileStatus fileStatus : fileSystem.globStatus(path)) {
-            if (fileStatus.isFile() && !fileStatus.getPath().getName().contains(".gz")) {
+            if (fileStatus.isFile() &&
+                    !fileStatus.getPath().getName().contains(".gz") &&
+                    !fileStatus.getPath().getName().endsWith(".tmp") &&
+                    !fileStatus.getPath().getName().startsWith(".") &&
+                    !fileStatus.getPath().getName().startsWith("_")) {
                 filePathSet.add(fileStatus.getPath().toUri().toString());
                 logger.info("need compress file num:{}", filePathSet.size());
             }

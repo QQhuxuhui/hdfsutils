@@ -10,7 +10,7 @@
     </parent>
     <groupId>hdfs</groupId>
     <artifactId>HDFSUtils</artifactId>
-    <version>1.0</version>
+    <version>1.1</version>
     <name>HDFSUtils</name>
     <description>project for hdfs</description>
 

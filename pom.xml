@@ -16,7 +16,7 @@
 
     <properties>
         <java.version>1.7</java.version>
-        <hadoop.version>2.7.3</hadoop.version>
+        <hadoop.version>2.10.1</hadoop.version>
         <slf4j.version>1.7.7</slf4j.version>
     </properties>
 

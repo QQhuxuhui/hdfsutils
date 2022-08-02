@@ -1,5 +1,6 @@
 package hdfs.compress;
 
+import hdfs.config.MyPathFilter;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.util.GenericOptionsParser;
@@ -89,7 +90,7 @@ public class CompressFile {
         }
         if ("compress".equals(type)) {
             logger.info("compress job complete, exit...");
-        }else{
+        } else {
             logger.info("uncompress job complete, exit...");
         }
         logger.info("exit success, bye bye!");
@@ -156,7 +157,7 @@ public class CompressFile {
      */
     private void getNeedUnCompressFilePathList(FileSystem fileSystem, Path path) throws IOException {
         //判断是否为文件夹
-        for (FileStatus fileStatus : fileSystem.globStatus(path)) {
+        for (FileStatus fileStatus : fileSystem.globStatus(path, MyPathFilter.hiddenFileFilter())) {
             if (fileStatus.isFile() && fileStatus.getPath().getName().contains(".gz")) {
                 filePathSet.add(fileStatus.getPath().toUri().toString());
             }

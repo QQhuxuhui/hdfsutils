@@ -1,5 +1,6 @@
 package hdfs.merge;
 
+import hdfs.config.MyPathFilter;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.IOUtils;
@@ -95,7 +96,7 @@ public class MergeSmallFile {
 
     private void getNeedMergeFolderPathList(FileSystem fileSystem, Path path) throws IOException {
         //判断是否为文件夹
-        for (FileStatus fileStatus : fileSystem.globStatus(path)) {
+        for (FileStatus fileStatus : fileSystem.globStatus(path, MyPathFilter.hiddenFileFilter())) {
             if (fileStatus.isFile()) {
                 String fileName = fileStatus.getPath().getName();
                 if (!fileName.startsWith("_") && !fileName.startsWith(".")) {
@@ -110,6 +111,13 @@ public class MergeSmallFile {
             }
         }
     }
+
+    private static final PathFilter hiddenFileFilter = new PathFilter() {
+        public boolean accept(Path p) {
+            String name = p.getName();
+            return !name.startsWith("_") && !name.startsWith(".");
+        }
+    };
 
     /**
      * 合并线程，参数为接收一个目录，合并目录下的小文件
@@ -141,7 +149,7 @@ public class MergeSmallFile {
             //获取所有文件列表
             FileStatus[] fileStatuses = new FileStatus[0];
             try {
-                fileStatuses = fileSystem.globStatus(new Path(folderPath + "/*"));
+                fileStatuses = fileSystem.globStatus(new Path(folderPath + "/*"), MyPathFilter.hiddenFileFilter());
             } catch (IOException e) {
                 e.printStackTrace();
                 return;

@@ -55,10 +55,6 @@ public class MergeSmallFile {
             logger.error("merge file parameters example: hdfs://xxx.xxx.xxx.xxx:8020 /xxx/xxx/xxx xx");
             return;
         }
-//        if (args.length == 3) {
-//            //自定义压缩块大小
-//            blockSize = Long.parseLong(args[2]);
-//        }
         MergeSmallFile mergeSmallFile = new MergeSmallFile();
         String[] uargs = new GenericOptionsParser(configuration, args).getRemainingArgs();
         defaultFS = uargs[0];

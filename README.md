@@ -26,7 +26,7 @@ java -cp HDFSUtils-1.0-jar-with-dependencies.jar hdfs.compress.CompressFile <fsU
 或者使用hadoop命令运行
 hadoop jar HDFSUtils-1.0-jar-with-dependencies.jar hdfs.compress.CompressFile <fsUri> <path> <type> <threads> <isAll>
 ```
-
+**<fsUri> <path>之间有空格，要特别注意！！！！**
 ##### 参数说明
 - \<fsUri\>：hdfs地址，例如hdfs://xxx.xxx.xxx.xxx:8020，如果使用hadoop命令，这里的地址可以使用namenode的servicename
 - \<path\>：需要合并的目录路径，例如解压缩hdfs上面位于/data/a目录下的文件，参数就为/data/a或者/data/a/或者/data/a/*都可以
@@ -38,6 +38,7 @@ hadoop jar HDFSUtils-1.0-jar-with-dependencies.jar hdfs.compress.CompressFile <f
     - false：只解/压缩当前目录下的文件，不包括目录下的子目录   
     - true：解/压缩当前目录以及当前目录子目录下的所有文件
 
+**再强调一遍，<fsUri> <path>之间有空格，要特别注意！！！！**
 ### 2. 合并指定目录下的小文件
 ```
 java -cp HDFSUtils-1.0-jar-with-dependencies.jar hdfs.merge.MergeSmallFile <fsUri> <path> <isGz>
